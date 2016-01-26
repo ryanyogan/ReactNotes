@@ -104,12 +104,41 @@ class ReactNotes extends Component {
     this.state = {
       // selectedNote: { title: '', body: ''},
       notes: {
-        1: {title: 'Note 1', body: 'Body 1', id: 1},
-        2: {title: 'Note 2', body: 'Body 2', id: 2}
+        1: {title: 'Note 1', body: 'Body 1', id: 1,
+        location: {
+          coords: {
+            latitude: 33.987,
+            longitude: -118.47
+          }
+        }},
+
+        2: {title: 'Note 2', body: 'Body 2', id: 2,
+        location: {
+          coords: {
+            latitude: 33.986,
+            longitude: -118.46
+          }
+        }}
       }
     };
 
     this.loadNotes();
+    this.trackLocation();
+  }
+
+  componentWillUnmount() {
+    navigator.geolocation.clearWatch(this.watchID);
+  }
+
+  trackLocation() {
+    navigator.geolocation.getCurrentPosition(
+      (initialPosition) => this.setState({initialPosition}),
+      (error) => alert(error.message)
+    );
+
+    this.watchID = navigator.geolocation.watchPosition(
+      (lastPosition) => this.setState({lastPosition})
+    );
   }
 
   renderScene(route, navigator) {
@@ -138,6 +167,11 @@ class ReactNotes extends Component {
 
   updateNote(note) {
     let newNotes = Object.assign({}, this.state.notes);
+
+    if (!note.isSaved) {
+      note.location = this.state.lastPosition;
+    }
+
     note.isSaved = true;
     newNotes[note.id] = note;
     this.setState({notes: newNotes});
