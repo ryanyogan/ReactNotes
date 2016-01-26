@@ -2,6 +2,7 @@
 
 import React, {
   AppRegistry,
+  Navigator,
   Component,
   StyleSheet,
   View
@@ -10,11 +11,28 @@ import React, {
 import SimpleButton from './App/Components/SimpleButton';
 
 class ReactNotes extends Component {
+
+  renderScene(route, navigator) {
+    switch (route.name) {
+      case 'home':
+        return (
+          <View style={styles.container}>
+            <SimpleButton
+              onPress={() => console.log('Press')}
+              customText='Create Note'
+            />
+          </View>
+        );
+      case 'createNote':
+    }
+  }
+
   render() {
     return (
-      <View style={styles.container}>
-        <SimpleButton />
-      </View>
+      <Navigator
+        initialRoute={{name: 'home'}}
+        renderScene={this.renderScene}
+      />
     );
   }
 }
