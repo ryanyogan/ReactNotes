@@ -6,8 +6,12 @@ import React, {
   Component,
   StyleSheet,
   View,
-  Text
+  Text,
+  StatusBarIOS,
+  AsyncStorage
 } from 'react-native';
+
+import _ from 'lodash';
 
 import SimpleButton from './App/Components/SimpleButton';
 import NoteScreen from './App/Components/NoteScreen';
@@ -37,7 +41,13 @@ const NavigationBarRouteMapper = {
           <SimpleButton
             onPress={() => {
               navigator.push({
-                name: 'createNote'
+                name: 'createNote',
+                note: {
+                  id: new Date().getTime(),
+                  title: '',
+                  body: '',
+                  isSaved: false
+                }
               });
             }}
             customText='Create Note'
@@ -45,6 +55,25 @@ const NavigationBarRouteMapper = {
             textStyle={styles.navBarButtonText}
           />
         );
+      case 'createNote':
+        if (route.note.isSaved) {
+          return (
+            <SimpleButton
+              onPress={
+                () => {
+                  navigator.props.onDeleteNote(route.note);
+                  navigator.pop();
+                }
+              }
+              customText='Delete'
+              style={styles.navBarRightButton}
+              textStyle={styles.navBarButtonText}
+            />
+          );
+        } else {
+          return null;
+        }
+
       default:
         return null;
     }
@@ -59,7 +88,7 @@ const NavigationBarRouteMapper = {
 
       case 'createNote':
         return (
-          <Text style={styles.navBarTitleText}>Create Note</Text>
+          <Text style={styles.navBarTitleText}>{route.note ? route.note.title : 'Create Note'}</Text>
         );
     }
   }
@@ -67,17 +96,77 @@ const NavigationBarRouteMapper = {
 
 class ReactNotes extends Component {
 
+  constructor(props) {
+    super(props);
+
+    StatusBarIOS.setStyle('light-content');
+
+    this.state = {
+      // selectedNote: { title: '', body: ''},
+      notes: {
+        1: {title: 'Note 1', body: 'Body 1', id: 1},
+        2: {title: 'Note 2', body: 'Body 2', id: 2}
+      }
+    };
+
+    this.loadNotes();
+  }
+
   renderScene(route, navigator) {
     switch (route.name) {
       case 'home':
         return (
-          <HomeScreen navigator={navigator} />
+          <HomeScreen 
+            navigator={navigator}
+            notes={_.toArray(this.state.notes)}
+            onSelectNote={(note) => navigator.push({
+              name: 'createNote',
+              note: note
+            })}
+          />
         );
 
       case 'createNote':
         return (
-          <NoteScreen />
+          <NoteScreen 
+            note={route.note}
+            onChangeNote={(note) => this.updateNote(note)}
+          />
         );
+    }
+  }
+
+  updateNote(note) {
+    let newNotes = Object.assign({}, this.state.notes);
+    note.isSaved = true;
+    newNotes[note.id] = note;
+    this.setState({notes: newNotes});
+    this.saveNotes(newNotes);
+  }
+
+  deleteNote(note) {
+    let newNotes = Object.assign({}, this.state.notes);
+    delete newNotes[note.id];
+    this.setState({ notes: newNotes });
+    this.saveNotes(newNotes);
+  }
+
+  async saveNotes(notes) {
+    try {
+      await AsyncStorage.setItem('@ReactNotes:notes', JSON.stringify(notes));
+    } catch(error) {
+      console.log('AsyncStorage error: ' + error.message);
+    }
+  }
+
+  async loadNotes() {
+    try {
+      const notes = await AsyncStorage.getItem('@ReactNotes:notes');
+      if (notes !== null) {
+        this.setState({ notes: JSON.parse(notes) });
+      }
+    } catch(error) {
+      console.log('AsyncStorage error: ' + error.message);
     }
   }
 
@@ -85,22 +174,20 @@ class ReactNotes extends Component {
     return (
       <Navigator
         initialRoute={{name: 'home'}}
-        renderScene={this.renderScene}
+        renderScene={this.renderScene.bind(this)}
         navigationBar={
           <Navigator.NavigationBar
             routeMapper={NavigationBarRouteMapper}
             style={styles.navBar}
           />
         }
+        onDeleteNote={(note) => this.deleteNote(note)}
       />
     );
   }
 }
 
 const styles = StyleSheet.create({
-  navContainer: {
-    flex: 1
-  },
   navBar: {
     backgroundColor: '#5B29C1',
     borderBottomColor: '#48209A',
@@ -110,7 +197,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '500',
-    marginVertical: 16 // Android
+    marginVertical: 9, // iOS
   },
   navBarLeftButton: {
     paddingLeft: 10
@@ -121,7 +208,7 @@ const styles = StyleSheet.create({
   navBarButtonText: {
     color: '#EEE',
     fontSize: 16,
-    marginVertical: 16 // Android
+    marginVertical: 10 // iOS
   }
 });
 
