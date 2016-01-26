@@ -5,10 +5,61 @@ import React, {
   Navigator,
   Component,
   StyleSheet,
-  View
+  View,
+  Text
 } from 'react-native';
 
 import SimpleButton from './App/Components/SimpleButton';
+import NoteScreen from './App/Components/NoteScreen';
+import HomeScreen from './App/Components/HomeScreen';
+
+const NavigationBarRouteMapper = {
+  LeftButton (route, navigator, index, navState) {
+    switch (route.name) {
+      case 'createNote':
+        return (
+          <SimpleButton
+            onPress={() => navigator.pop()}
+            customText='Back'
+          />
+        );
+      default:
+        return null;
+    }
+  },
+
+  RightButton (route, navigator, index, navState) {
+    switch (route.name) {
+      case 'home':
+        return (
+          <SimpleButton
+            onPress={() => {
+              navigator.push({
+                name: 'createNote'
+              });
+            }}
+            customText='Create Note'
+          />
+        );
+      default:
+        return null;
+    }
+  },
+
+  Title (route, navigator, index, navState) {
+    switch (route.name) {
+      case 'home':
+        return (
+          <Text>React Notes</Text>
+        );
+
+      case 'createNote':
+        return (
+          <Text>Create Note</Text>
+        );
+    }
+  }
+};
 
 class ReactNotes extends Component {
 
@@ -16,14 +67,13 @@ class ReactNotes extends Component {
     switch (route.name) {
       case 'home':
         return (
-          <View style={styles.container}>
-            <SimpleButton
-              onPress={() => console.log('Press')}
-              customText='Create Note'
-            />
-          </View>
+          <HomeScreen />
         );
+        
       case 'createNote':
+        return (
+          <NoteScreen />
+        );
     }
   }
 
@@ -32,6 +82,11 @@ class ReactNotes extends Component {
       <Navigator
         initialRoute={{name: 'home'}}
         renderScene={this.renderScene}
+        navigationBar={
+          <Navigator.NavigationBar
+            routeMapper={NavigationBarRouteMapper}
+          />
+        }
       />
     );
   }
