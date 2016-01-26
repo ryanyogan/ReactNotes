@@ -16,11 +16,22 @@ import _ from 'lodash';
 import SimpleButton from './App/Components/SimpleButton';
 import NoteScreen from './App/Components/NoteScreen';
 import HomeScreen from './App/Components/HomeScreen';
+import NoteLocationScreen from './App/Components/NoteLocationScreen';
 
 const NavigationBarRouteMapper = {
   LeftButton (route, navigator, index, navState) {
     switch (route.name) {
+      case 'home':
+        return (
+          <SimpleButton
+            onPress={() => navigator.push({name: 'noteLocations'})}
+            customText='Map'
+            style={styles.navBarLeftButton}
+            textStyle={styles.navBarButtonText}
+          />
+        );
       case 'createNote':
+      case 'noteLocations':
         return (
           <SimpleButton
             onPress={() => navigator.pop()}
@@ -90,6 +101,11 @@ const NavigationBarRouteMapper = {
         return (
           <Text style={styles.navBarTitleText}>{route.note ? route.note.title : 'Create Note'}</Text>
         );
+
+      case 'noteLocations':
+        return (
+          <Text style={styles.navBarTitleText}>Note Locations</Text>
+        );
     }
   }
 };
@@ -99,17 +115,45 @@ class ReactNotes extends Component {
   constructor(props) {
     super(props);
 
-    StatusBarIOS.setStyle('light-content');
 
     this.state = {
       // selectedNote: { title: '', body: ''},
       notes: {
-        1: {title: 'Note 1', body: 'Body 1', id: 1},
-        2: {title: 'Note 2', body: 'Body 2', id: 2}
+        1: {title: 'Note 1', body: 'Body 1', id: 1,
+        location: {
+          coords: {
+            latitude: 33.987,
+            longitude: -118.47
+          }
+        }},
+
+        2: {title: 'Note 2', body: 'Body 2', id: 2,
+        location: {
+          coords: {
+            latitude: 33.986,
+            longitude: -118.46
+          }
+        }}
       }
     };
 
     this.loadNotes();
+    this.trackLocation();
+  }
+
+  componentWillUnmount() {
+    navigator.geolocation.clearWatch(this.watchID);
+  }
+
+  trackLocation() {
+    navigator.geolocation.getCurrentPosition(
+      (initialPosition) => this.setState({initialPosition}),
+      (error) => alert(error.message)
+    );
+
+    this.watchID = navigator.geolocation.watchPosition(
+      (lastPosition) => this.setState({lastPosition})
+    );
   }
 
   renderScene(route, navigator) {
@@ -133,11 +177,26 @@ class ReactNotes extends Component {
             onChangeNote={(note) => this.updateNote(note)}
           />
         );
+
+      case 'noteLocations':
+        return (
+          <NoteLocationScreen
+            notes={this.state.notes}
+            onSelectNote={(note) => navigator.push({
+              name: 'createNote', note: note
+            })}
+          />
+        );
     }
   }
 
   updateNote(note) {
     let newNotes = Object.assign({}, this.state.notes);
+
+    if (!note.isSaved) {
+      note.location = this.state.lastPosition;
+    }
+
     note.isSaved = true;
     newNotes[note.id] = note;
     this.setState({notes: newNotes});
@@ -197,7 +256,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '500',
-    marginVertical: 9, // iOS
+    marginVertical: 16, // iOS
   },
   navBarLeftButton: {
     paddingLeft: 10
@@ -208,7 +267,7 @@ const styles = StyleSheet.create({
   navBarButtonText: {
     color: '#EEE',
     fontSize: 16,
-    marginVertical: 10 // iOS
+    marginVertical: 16
   }
 });
 
